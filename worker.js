@@ -1,21 +1,5 @@
-// Cloudflare Worker for VinCheck Pro - Vincario API Proxy
-// Handles CORS, authentication, and API requests
-
-async function sha1(message) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(message);
-  const hashBuffer = await crypto.subtle.digest('SHA-1', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  return hashHex.substring(0, 10);
-}
-
-function validateVin(vin) {
-  if (!vin || vin.length !== 17) return false;
-  const invalidChars = /[IOQ]/i;
-  const alphanumeric = /^[A-Z0-9]+$/i;
-  return !invalidChars.test(vin) && alphanumeric.test(vin);
-}
+// Cloudflare Worker for VinCheck Pro - GlobalVIN API Proxy
+// Handles CORS and API requests for VIN and license plate lookups
 
 export default {
   async fetch(request, env, ctx) {
@@ -43,11 +27,18 @@ export default {
     }
 
     try {
-      const { identifier, inputType, type } = await request.json();
+      const { identifier, inputType } = await request.json();
+      const apiKey = env.GLOBALVIN_API_KEY;
 
-      // Validate input
-      if (!type) {
-        return new Response(JSON.stringify({ error: 'Tipo di controllo mancante' }), {
+      // Prepare request body for GlobalVIN
+      let requestBody;
+      if (inputType === 'vin') {
+        requestBody = { vin: identifier };
+      } else if (inputType === 'targa') {
+        // For license plates, we need country code; default to Italy (IT) for now
+        requestBody = { plate: identifier, country: 'IT' };
+      } else {
+        return new Response(JSON.stringify({ error: 'Tipo di input non valido' }), {
           status: 400,
           headers: {
             'Content-Type': 'application/json',
@@ -56,61 +47,20 @@ export default {
         });
       }
 
-      let vin = null;
-      if (inputType === 'vin') {
-        vin = identifier;
-        if (!validateVin(vin)) {
-          return new Response(JSON.stringify({ error: 'Il numero VIN inserito non è valido' }), {
-            status: 400,
-            headers: {
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*',
-            },
-          });
-        }
-      } else if (inputType === 'targa') {
-        // For targa, we need to check if Vincario supports it
-        // Note: Check Vincario API docs for targa endpoint
-        // For now, we'll treat it as VIN (or use appropriate endpoint)
-        vin = identifier;
-      }
+      // Call GlobalVIN API
+      const response = await fetch('https://api.globalvin.co/v1/api/vin/basic', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      });
 
-      const apiKey = env.VINCARIO_API_KEY;
-      const secretKey = env.VINCARIO_SECRET_KEY;
-      const upperIdentifier = identifier ? identifier.toUpperCase() : '';
-
-      // Calculate control sum
-      let controlSumMessage;
-      if (upperIdentifier) {
-        controlSumMessage = `${upperIdentifier}|${type}|${apiKey}|${secretKey}`;
-      } else {
-        controlSumMessage = `${type}|${apiKey}|${secretKey}`;
-      }
-      const controlSum = await sha1(controlSumMessage);
-
-      // Build Vincario API URL
-      let apiUrl;
-      if (upperIdentifier) {
-        apiUrl = `https://api.vincario.com/3.2/${type}/${upperIdentifier}/${apiKey}/${controlSum}`;
-      } else {
-        apiUrl = `https://api.vincario.com/3.2/${type}/${apiKey}/${controlSum}`;
-      }
-
-      // Fetch from Vincario API
-      const vincarioResponse = await fetch(apiUrl);
-      
-      if (!vincarioResponse.ok) {
-        const errorText = await vincarioResponse.text();
-        let errorMessage = 'Errore nel recupero dei dati. Riprova tra qualche secondo.';
-        
-        if (vincarioResponse.status === 404) {
-          errorMessage = inputType === 'targa' ? 'Nessun dato trovato per questa targa' : 'Nessun dato trovato per questo VIN';
-        } else if (vincarioResponse.status === 402 || errorText.toLowerCase().includes('balance')) {
-          errorMessage = 'Crediti API esauriti. Contattare il supporto.';
-        }
-        
-        return new Response(JSON.stringify({ error: errorMessage }), {
-          status: vincarioResponse.status,
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Errore nel recupero dei dati' }));
+        return new Response(JSON.stringify({ error: errorData.message || 'Errore nel recupero dei dati' }), {
+          status: response.status,
           headers: {
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*',
@@ -118,7 +68,7 @@ export default {
         });
       }
 
-      const data = await vincarioResponse.json();
+      const data = await response.json();
 
       // Return successful response
       return new Response(JSON.stringify(data), {
