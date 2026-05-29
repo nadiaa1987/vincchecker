@@ -1018,8 +1018,8 @@
     </footer>
 
     <script>
-        // Configuration - TODO: Update with your actual Cloudflare Worker URL!
-        const WORKER_URL = 'https://your-worker.workers.dev/api/check-vin';
+        // Configuration - Replace with your actual Cloudflare Worker URL!
+        const WORKER_URL = 'https://YOUR-WORKER-SUBDOMAIN.workers.dev/api/check-vin';
 
         // Current input type
         let currentInputType = 'vin';
@@ -1167,59 +1167,47 @@
 
         function displayResults(data) {
             resultsGrid.innerHTML = '';
-            const vehicleData = data.data;
+            // Try to find the vehicle data in the response (it might be in data.data, or directly in data)
+            const vehicleData = data.data || data;
 
-            // Vehicle Identity Card
-            const identityCard = createResultCard('Identità Veicolo', [
-                { label: 'Marca', value: vehicleData.brand_name || '-' },
-                { label: 'Modello', value: vehicleData.model_name || '-' },
-                { label: 'Anno', value: vehicleData.year || '-' },
-                { label: 'Tipo Veicolo', value: vehicleData.car_type || '-' },
-                { label: 'Colore', value: vehicleData.color || '-' }
-            ]);
+            // Create result card with all available data
+            const allDataCard = document.createElement('div');
+            allDataCard.className = 'result-card full-width';
+            let allDataHtml = '<h3>Dettagli Veicolo</h3>';
 
-            // Engine & Technical Card
-            const engineCard = createResultCard('Motore e Dati Tecnici', [
-                { label: 'Motore', value: vehicleData.engine || '-' },
-                { label: 'Cilindrata', value: vehicleData.displacement || '-' },
-                { label: 'Alimentazione', value: vehicleData.fuel_type || '-' },
-                { label: 'Cambio', value: vehicleData.transmission || '-' }
-            ]);
+            // Flatten the response object to show all key-value pairs
+            function addData(obj, prefix = '') {
+                for (const key in obj) {
+                    const value = obj[key];
+                    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                        addData(value, `${prefix}${key}.`);
+                    } else if (Array.isArray(value)) {
+                        allDataHtml += `
+                            <div class="result-item">
+                                <span class="result-label">${prefix}${key}</span>
+                                <span class="result-value">${JSON.stringify(value)}</span>
+                            </div>
+                        `;
+                    } else if (value !== null && value !== undefined && value !== '') {
+                        // Convert key from camelCase/snake_case to readable text
+                        const readableKey = key
+                            .replace(/([A-Z])/g, ' $1')
+                            .replace(/_/g, ' ')
+                            .replace(/^\w/, c => c.toUpperCase());
+                        allDataHtml += `
+                            <div class="result-item">
+                                <span class="result-label">${prefix}${readableKey}</span>
+                                <span class="result-value">${value}</span>
+                            </div>
+                        `;
+                    }
+                }
+            }
 
-            // Risk Assessment Card
-            const isHighRisk = vehicleData.is_highrisk_vehicle === '1' || vehicleData.is_highrisk_vehicle === 1;
-            const statusCard = document.createElement('div');
-            statusCard.className = 'result-card';
-            statusCard.innerHTML = `
-                <h3>Valutazione Rischio</h3>
-                <span class="status-badge ${isHighRisk ? 'warning' : 'clean'}">
-                    ${isHighRisk ? '⚠️ ATTENZIONE: Veicolo ad Alto Rischio' : '✅ Veicolo a Basso Rischio'}
-                </span>
-                <div class="result-item">
-                    <span class="result-label">Valutazione</span>
-                    <span class="result-value">${vehicleData.risk_assessment || '-'}</span>
-                </div>
-            `;
+            addData(vehicleData);
+            allDataCard.innerHTML = allDataHtml;
 
-            // Market Value Card
-            const marketCard = document.createElement('div');
-            marketCard.className = 'result-card';
-            marketCard.innerHTML = `
-                <h3>Valore di Mercato</h3>
-                <div class="result-item">
-                    <span class="result-label">Prezzo Nuovo</span>
-                    <span class="result-value">€${vehicleData.market_price ? vehicleData.market_price.toLocaleString() : '-'}</span>
-                </div>
-                <div class="result-item">
-                    <span class="result-label">Prezzo Usato</span>
-                    <span class="result-value">€${vehicleData.used_car_price || '-'}</span>
-                </div>
-            `;
-
-            resultsGrid.appendChild(identityCard);
-            resultsGrid.appendChild(engineCard);
-            resultsGrid.appendChild(statusCard);
-            resultsGrid.appendChild(marketCard);
+            resultsGrid.appendChild(allDataCard);
 
             // Raw data
             displayRawData(data);

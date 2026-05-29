@@ -30,13 +30,13 @@ export default {
       const { identifier, inputType } = await request.json();
       const apiKey = env.GLOBALVIN_API_KEY;
 
-      // Prepare request body for GlobalVIN
+      // Prepare request body for GlobalVIN API
       let requestBody;
       if (inputType === 'vin') {
         requestBody = { vin: identifier };
       } else if (inputType === 'targa') {
-        // For license plates, we need country code; default to Italy (IT) for now
-        requestBody = { plate: identifier, country: 'IT' };
+        // For license plates - we'll need to check the exact parameter name, but let's try 'plate' first
+        requestBody = { plate: identifier };
       } else {
         return new Response(JSON.stringify({ error: 'Tipo di input non valido' }), {
           status: 400,
@@ -48,10 +48,10 @@ export default {
       }
 
       // Call GlobalVIN API
-      const response = await fetch('https://api.globalvin.co/v1/api/vin/basic', {
+      const response = await fetch('https://api.globalvin.com/api/vin/lookup/decode', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'X-API-Key': apiKey,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestBody),
