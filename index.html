@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VinCheck Pro - Controlla la Storia della Tua Auto</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://www.paypal.com/sdk/js?client-id=AVIyLzhKZE_g9wlGaBm4alnVvrxpiM17d7L0E1Y6fQILcyCCrU78Z1cvhqNgPJk2WRve0EYGJMiILXAQ&currency=EUR"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --navy: #0A1628;
+            --teal: #00D4AA;
+            --orange: #FF6B35;
+            --white: #FFFFFF;
+            --dark-text: #1A1A2E;
+            --light-bg: #F8F9FA;
+            --card-bg: #FFFFFF;
+            --muted: #6B7280;
+            --success: #10B981;
+            --error: #EF4444;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--light-bg);
+            color: var(--dark-text);
+            line-height: 1.6;
+        }
+
+        /* Header */
+        header {
+            background-color: var(--navy);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--white);
+        }
+
+        .logo span {
+            color: var(--teal);
+        }
+
+        .credits-display {
+            background-color: rgba(255,255,255,0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            color: var(--white);
+            font-weight: 600;
+        }
+
+        .credits-display span {
+            color: var(--teal);
+            font-size: 1.25rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            background-color: var(--navy);
+            padding: 4rem 2rem 6rem;
+            text-align: center;
+        }
+
+        .hero-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: var(--teal);
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .hero-tagline {
+            font-size: 1rem;
+            color: rgba(255,255,255,0.8);
+            margin-bottom: 2.5rem;
+        }
+
+        /* VIN Input Section */
+        .vin-input-section {
+            background-color: var(--card-bg);
+            max-width: 600px;
+            margin: -3rem auto 0;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            position: relative;
+            z-index: 10;
+        }
+
+        .vin-input-wrapper {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .vin-input {
+            flex: 1;
+            padding: 1rem 1.25rem;
+            font-size: 1.125rem;
+            border: 2px solid #E5E7EB;
+            border-radius: 10px;
+            font-family: 'Inter', sans-serif;
+            text-transform: uppercase;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .vin-input:focus {
+            outline: none;
+            border-color: var(--teal);
+            box-shadow: 0 0 0 4px rgba(0,212,170,0.1);
+        }
+
+        .vin-input.error {
+            border-color: var(--error);
+        }
+
+        .check-btn {
+            background-color: var(--teal);
+            color: var(--white);
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+            white-space: nowrap;
+        }
+
+        .check-btn:hover {
+            background-color: #00B894;
+            transform: translateY(-2px);
+        }
+
+        .check-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .error-text {
+            color: var(--error);
+            font-size: 0.875rem;
+            text-align: left;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: var(--white);
+            animation: spin 0.8s linear infinite;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* How It Works */
+        .how-it-works {
+            max-width: 1200px;
+            margin: 4rem auto;
+            padding: 0 2rem;
+        }
+
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 3rem;
+            color: var(--dark-text);
+        }
+
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+        }
+
+        .step-card {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .step-number {
+            width: 60px;
+            height: 60px;
+            background-color: var(--teal);
+            color: var(--white);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0 auto 1rem;
+        }
+
+        .step-card h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .step-card p {
+            color: var(--muted);
+        }
+
+        /* Trust Badges */
+        .trust-badges {
+            background-color: var(--card-bg);
+            padding: 3rem 2rem;
+            margin: 4rem 0;
+        }
+
+        .badges-grid {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2rem;
+        }
+
+        .badge {
+            text-align: center;
+        }
+
+        .badge-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .badge-text {
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        /* Pricing Section */
+        .pricing {
+            max-width: 1200px;
+            margin: 4rem auto;
+            padding: 0 2rem;
+        }
+
+        .pricing-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .pricing-tagline {
+            color: var(--teal);
+            font-weight: 600;
+            font-size: 1.125rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .price-card {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            position: relative;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .price-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+
+        .price-card.popular {
+            transform: scale(1.05);
+            border: 2px solid var(--teal);
+            box-shadow: 0 10px 40px rgba(0,212,170,0.2);
+        }
+
+        .price-card.popular:hover {
+            transform: scale(1.05) translateY(-5px);
+        }
+
+        .card-badge {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 0.25rem 1rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .card-badge.popular-badge {
+            background-color: var(--teal);
+            color: var(--white);
+        }
+
+        .card-badge.pro-badge {
+            background-color: var(--orange);
+            color: var(--white);
+        }
+
+        .pack-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin: 0.5rem 0 1rem;
+        }
+
+        .checks-count {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--dark-text);
+            line-height: 1;
+        }
+
+        .checks-label {
+            color: var(--muted);
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+
+        .total-price {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--teal);
+            margin-bottom: 0.25rem;
+        }
+
+        .price-per-check {
+            font-size: 0.875rem;
+            color: var(--muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .savings {
+            color: var(--success);
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+
+        .comparison {
+            font-size: 0.75rem;
+            color: var(--muted);
+            font-style: italic;
+            margin-bottom: 1.5rem;
+        }
+
+        /* FAQ Section */
+        .faq {
+            max-width: 800px;
+            margin: 4rem auto;
+            padding: 0 2rem;
+        }
+
+        .faq-item {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .faq-question {
+            padding: 1.25rem 1.5rem;
+            background: none;
+            border: none;
+            width: 100%;
+            text-align: left;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .faq-answer {
+            padding: 0 1.5rem 1.25rem;
+            color: var(--muted);
+            display: none;
+        }
+
+        .faq-answer.open {
+            display: block;
+        }
+
+        .faq-icon {
+            font-size: 1.25rem;
+            transition: transform 0.3s;
+        }
+
+        .faq-icon.open {
+            transform: rotate(45deg);
+        }
+
+        /* Results Section */
+        .results {
+            max-width: 1000px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+            display: none;
+        }
+
+        .results.open {
+            display: block;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .results-header h2 {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+
+        .reset-btn {
+            background-color: transparent;
+            color: var(--teal);
+            border: 2px solid var(--teal);
+            padding: 0.75rem 1.5rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .reset-btn:hover {
+            background-color: var(--teal);
+            color: var(--white);
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .result-card {
+            background-color: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .result-card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .result-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #F3F4F6;
+        }
+
+        .result-item:last-child {
+            border-bottom: none;
+        }
+
+        .result-label {
+            color: var(--muted);
+            font-size: 0.875rem;
+        }
+
+        .result-value {
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.875rem;
+        }
+
+        .status-badge.clean {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        .status-badge.warning {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+        }
+
+        .chart-container {
+            height: 100px;
+            margin-top: 1rem;
+        }
+
+        .raw-data {
+            margin-top: 1.5rem;
+        }
+
+        .raw-data-toggle {
+            background: none;
+            border: none;
+            color: var(--teal);
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.875rem;
+        }
+
+        .raw-data-table {
+            margin-top: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .raw-data-table.open {
+            display: block;
+        }
+
+        .raw-data-table table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.75rem;
+        }
+
+        .raw-data-table th,
+        .raw-data-table td {
+            padding: 0.5rem;
+            text-align: left;
+            border: 1px solid #E5E7EB;
+        }
+
+        .raw-data-table th {
+            background-color: #F3F4F6;
+            font-weight: 600;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 16px;
+            max-width: 500px;
+            width: 100%;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--muted);
+        }
+
+        .modal h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .modal-pricing {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .modal-price-card {
+            border: 2px solid #E5E7EB;
+            border-radius: 12px;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .modal-price-card.selected {
+            border-color: var(--teal);
+            background-color: rgba(0,212,170,0.05);
+        }
+
+        .modal-price-info h3 {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .modal-price-info p {
+            color: var(--muted);
+            font-size: 0.875rem;
+        }
+
+        .modal-price {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--teal);
+        }
+
+        /* Messages */
+        .message {
+            padding: 1rem 1.25rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .message.success {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            display: block;
+        }
+
+        .message.error {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+            display: block;
+        }
+
+        /* Footer */
+        footer {
+            background-color: var(--navy);
+            color: var(--white);
+            padding: 3rem 2rem;
+            margin-top: 4rem;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .footer-links a {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-size: 0.875rem;
+            transition: color 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: var(--teal);
+        }
+
+        .footer-copyright {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.875rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .steps-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .badges-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .pricing-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .price-card.popular {
+                transform: none;
+            }
+
+            .price-card.popular:hover {
+                transform: translateY(-5px);
+            }
+
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .hero h1 {
+                font-size: 1.75rem;
+            }
+
+            .vin-input-wrapper {
+                flex-direction: column;
+            }
+
+            .check-btn {
+                width: 100%;
+            }
+
+            .badges-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">VinCheck<span>Pro</span></div>
+            <div class="credits-display">Crediti: <span id="credits-count">1</span></div>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Controlla la storia della tua auto prima di comprarla</h1>
+            <p class="hero-subtitle">Fino all'89% più economico di autoDNA e carVertical</p>
+            <p class="hero-tagline">Verifica istantanea in 5 secondi</p>
+        </div>
+    </section>
+
+    <section class="vin-input-section">
+        <div id="message-container"></div>
+        <div class="vin-input-wrapper">
+            <input type="text" id="vin-input" class="vin-input" placeholder="Inserisci il numero VIN (17 caratteri)" maxlength="17">
+            <button id="check-btn" class="check-btn">Controlla VIN</button>
+        </div>
+        <p id="error-text" class="error-text" style="display: none;"></p>
+    </section>
+
+    <section class="how-it-works">
+        <h2 class="section-title">Come Funziona</h2>
+        <div class="steps-grid">
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <h3>Inserisci VIN</h3>
+                <p>Digita il numero VIN di 17 caratteri del veicolo</p>
+            </div>
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <h3>Ottieni Report</h3>
+                <p>Ricevi informazioni complete in pochi secondi</p>
+            </div>
+            <div class="step-card">
+                <div class="step-number">3</div>
+                <h3>Compra in Sicurezza</h3>
+                <p>Prendi decisioni informate sul tuo acquisto</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="trust-badges">
+        <div class="badges-grid">
+            <div class="badge">
+                <div class="badge-icon">🌍</div>
+                <div class="badge-text">26+ Paesi Europei</div>
+            </div>
+            <div class="badge">
+                <div class="badge-icon">📋</div>
+                <div class="badge-text">Database Ufficiali</div>
+            </div>
+            <div class="badge">
+                <div class="badge-icon">⚡</div>
+                <div class="badge-text">Risultati Istantanei</div>
+            </div>
+            <div class="badge">
+                <div class="badge-icon">⏱️</div>
+                <div class="badge-text">Verificato in 5 secondi</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="pricing" id="pricing">
+        <div class="pricing-header">
+            <p class="pricing-tagline">Fino all'89% più economico di autoDNA e carVertical</p>
+            <h2 class="section-title">Piani e Prezzi</h2>
+        </div>
+        <div class="pricing-grid">
+            <div class="price-card">
+                <div class="pack-name">Pack Starter</div>
+                <div class="checks-count">3</div>
+                <div class="checks-label">controlli</div>
+                <div class="total-price">€7.99</div>
+                <div class="price-per-check">€2.66 / controllo</div>
+                <div class="comparison">autoDNA: €24.99 a controllo — Tu paghi €2.66</div>
+                <div id="paypal-button-starter"></div>
+            </div>
+            <div class="price-card popular">
+                <div class="card-badge popular-badge">⭐ Più Popolare</div>
+                <div class="pack-name">Pack Popular</div>
+                <div class="checks-count">10</div>
+                <div class="checks-label">controlli</div>
+                <div class="total-price">€19.99</div>
+                <div class="price-per-check">€2.00 / controllo</div>
+                <div class="savings">Risparmi €3.99</div>
+                <div class="comparison">autoDNA: €24.99 a controllo — Tu paghi €2.00</div>
+                <div id="paypal-button-popular"></div>
+            </div>
+            <div class="price-card">
+                <div class="card-badge pro-badge">🔥 Miglior Valore</div>
+                <div class="pack-name">Pack Pro</div>
+                <div class="checks-count">25</div>
+                <div class="checks-label">controlli</div>
+                <div class="total-price">€39.99</div>
+                <div class="price-per-check">€1.60 / controllo</div>
+                <div class="savings">Risparmi €26.76</div>
+                <div class="comparison">autoDNA: €24.99 a controllo — Tu paghi €1.60</div>
+                <div id="paypal-button-pro"></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="faq">
+        <h2 class="section-title">Domande Frequenti</h2>
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                Come funziona il controllo VIN?
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+                Inserisci il numero VIN di 17 caratteri e il nostro sistema interroga i database ufficiali per fornirti un report completo sul veicolo, inclusi dati tecnici, storia di furto e valore di mercato.
+            </div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                Quali paesi sono supportati?
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+                Supportiamo oltre 26 paesi europei tra cui Italia, Francia, Germania, Spagna, Regno Unito e molti altri.
+            </div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                I miei dati sono al sicuro?
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+                Sì, non memorizziamo i tuoi dati personali. I crediti sono salvati localmente sul tuo dispositivo e non richiediamo alcuna registrazione.
+            </div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                Quanto tempo ci vuole per ricevere il report?
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+                I risultati sono istantanei! Riceverai il report completo in meno di 5 secondi.
+            </div>
+        </div>
+        <div class="faq-item">
+            <button class="faq-question" onclick="toggleFaq(this)">
+                Posso usare i crediti quando voglio?
+                <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-answer">
+                Assolutamente sì! I crediti sono salvati sul tuo dispositivo e puoi usarli in qualsiasi momento senza scadenza.
+            </div>
+        </div>
+    </section>
+
+    <section class="results" id="results">
+        <div class="results-header">
+            <h2>Risultati del Controllo</h2>
+            <button class="reset-btn" onclick="resetForm()">Controlla un altro VIN</button>
+        </div>
+        <div class="results-grid" id="results-grid"></div>
+        <div class="raw-data">
+            <button class="raw-data-toggle" onclick="toggleRawData()">Mostra dati completi</button>
+            <div class="raw-data-table" id="raw-data-table"></div>
+        </div>
+    </section>
+
+    <div class="modal-overlay" id="buy-modal">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <h2>Crediti Esauriti!</h2>
+            <p style="text-align: center; margin-bottom: 1.5rem; color: var(--muted);">Acquista più crediti per continuare</p>
+            <div class="pricing-grid" style="grid-template-columns: 1fr;">
+                <div class="price-card popular" style="transform: none;">
+                    <div class="card-badge popular-badge">⭐ Più Popolare</div>
+                    <div class="pack-name">Pack Popular</div>
+                    <div class="checks-count">10</div>
+                    <div class="checks-label">controlli</div>
+                    <div class="total-price">€19.99</div>
+                    <div class="price-per-check">€2.00 / controllo</div>
+                    <div class="savings">Risparmi €3.99</div>
+                    <div id="paypal-button-modal-popular"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="#">Privacy Policy</a>
+                <a href="#">Termini di Servizio</a>
+            </div>
+            <p class="footer-copyright">&copy; 2026 VinCheck Pro. Tutti i diritti riservati.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Configuration
+        const WORKER_URL = 'https://your-worker.workers.dev/api/check-vin';
+
+        // Initialize credits
+        let credits = parseInt(localStorage.getItem('vincheck_credits'));
+        if (isNaN(credits)) {
+            credits = 1;
+            localStorage.setItem('vincheck_credits', credits);
+        }
+        updateCreditDisplay();
+
+        // DOM Elements
+        const vinInput = document.getElementById('vin-input');
+        const checkBtn = document.getElementById('check-btn');
+        const errorText = document.getElementById('error-text');
+        const resultsSection = document.getElementById('results');
+        const resultsGrid = document.getElementById('results-grid');
+        const rawDataTable = document.getElementById('raw-data-table');
+        const buyModal = document.getElementById('buy-modal');
+        const messageContainer = document.getElementById('message-container');
+
+        // VIN input formatting
+        vinInput.addEventListener('input', function(e) {
+            this.value = this.value.toUpperCase();
+            this.classList.remove('error');
+            errorText.style.display = 'none';
+        });
+
+        // Check VIN button
+        checkBtn.addEventListener('click', checkVin);
+
+        vinInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkVin();
+            }
+        });
+
+        async function checkVin() {
+            const vin = vinInput.value.trim();
+
+            // Validate credits first
+            if (credits <= 0) {
+                openModal();
+                return;
+            }
+
+            // Validate VIN
+            if (!validateVin(vin)) {
+                vinInput.classList.add('error');
+                errorText.textContent = 'Il numero VIN inserito non è valido (17 caratteri, senza I, O, Q)';
+                errorText.style.display = 'block';
+                return;
+            }
+
+            // Disable button and show loading
+            checkBtn.disabled = true;
+            checkBtn.innerHTML = '<span class="spinner"></span>Controllando...';
+            clearMessages();
+
+            try {
+                // Make all three API calls in parallel
+                const [decodeData, stolenData, marketValueData] = await Promise.all([
+                    makeApiCall(vin, 'decode'),
+                    makeApiCall(vin, 'stolen-check'),
+                    makeApiCall(vin, 'vehicle-market-value')
+                ]);
+
+                // Deduct credit
+                credits--;
+                localStorage.setItem('vincheck_credits', credits);
+                updateCreditDisplay();
+
+                // Display results
+                displayResults(decodeData, stolenData, marketValueData);
+
+                // Show message if low on credits
+                if (credits < 2) {
+                    showSuccessMessage('Controllo completato! Ti consigliamo di acquistare più crediti.');
+                }
+
+            } catch (error) {
+                showErrorMessage(error.message || 'Errore nel recupero dei dati. Riprova tra qualche secondo.');
+            } finally {
+                checkBtn.disabled = false;
+                checkBtn.innerHTML = 'Controlla VIN';
+            }
+        }
+
+        async function makeApiCall(vin, type) {
+            const response = await fetch(WORKER_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ vin, type }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Errore nel recupero dei dati');
+            }
+
+            return data;
+        }
+
+        function validateVin(vin) {
+            if (!vin || vin.length !== 17) return false;
+            const invalidChars = /[IOQ]/i;
+            const alphanumeric = /^[A-Z0-9]+$/i;
+            return !invalidChars.test(vin) && alphanumeric.test(vin);
+        }
+
+        function displayResults(decodeData, stolenData, marketValueData) {
+            resultsGrid.innerHTML = '';
+
+            // Vehicle Identity Card
+            const identityCard = createResultCard('Identità Veicolo', [
+                { label: 'Marca', value: decodeData.make || '-' },
+                { label: 'Modello', value: decodeData.model || '-' },
+                { label: 'Anno', value: decodeData.year || '-' },
+                { label: 'Tipo Carrozzeria', value: decodeData.body_type || '-' },
+                { label: 'Colore', value: decodeData.color || '-' }
+            ]);
+
+            // Engine & Technical Card
+            const engineCard = createResultCard('Motore e Dati Tecnici', [
+                { label: 'Cilindrata', value: decodeData.engine_size || '-' },
+                { label: 'Alimentazione', value: decodeData.fuel_type || '-' },
+                { label: 'Cambio', value: decodeData.transmission || '-' },
+                { label: 'Potenza (CV)', value: decodeData.power_hp || '-' },
+                { label: 'Potenza (kW)', value: decodeData.power_kw || '-' }
+            ]);
+
+            // History Status Card
+            const isStolen = stolenData.stolen === true || stolenData.status === 'stolen';
+            const statusCard = document.createElement('div');
+            statusCard.className = 'result-card';
+            statusCard.innerHTML = `
+                <h3>Stato Storico</h3>
+                <span class="status-badge ${isStolen ? 'warning' : 'clean'}">
+                    ${isStolen ? '⚠️ ATTENZIONE: Veicolo Segnalato' : '✅ Veicolo Pulito'}
+                </span>
+            `;
+
+            // Market Value Card
+            const marketCard = document.createElement('div');
+            marketCard.className = 'result-card full-width';
+            marketCard.innerHTML = `
+                <h3>Valore di Mercato</h3>
+                <div class="chart-container">
+                    <canvas id="market-chart"></canvas>
+                </div>
+            `;
+
+            resultsGrid.appendChild(identityCard);
+            resultsGrid.appendChild(engineCard);
+            resultsGrid.appendChild(statusCard);
+            resultsGrid.appendChild(marketCard);
+
+            // Create market value chart
+            createMarketChart(marketValueData);
+
+            // Raw data
+            const allData = {
+                decode: decodeData,
+                stolen: stolenData,
+                marketValue: marketValueData
+            };
+            displayRawData(allData);
+
+            resultsSection.classList.add('open');
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function createResultCard(title, items) {
+            const card = document.createElement('div');
+            card.className = 'result-card';
+            let html = `<h3>${title}</h3>`;
+            items.forEach(item => {
+                html += `
+                    <div class="result-item">
+                        <span class="result-label">${item.label}</span>
+                        <span class="result-value">${item.value}</span>
+                    </div>
+                `;
+            });
+            card.innerHTML = html;
+            return card;
+        }
+
+        function createMarketChart(data) {
+            const minPrice = data.min_price || 5000;
+            const avgPrice = data.average_price || 15000;
+            const maxPrice = data.max_price || 25000;
+
+            const ctx = document.getElementById('market-chart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Minimo', 'Medio', 'Massimo'],
+                    datasets: [{
+                        label: 'Prezzo (€)',
+                        data: [minPrice, avgPrice, maxPrice],
+                        backgroundColor: [
+                            'rgba(0, 212, 170, 0.5)',
+                            'rgba(0, 212, 170, 0.8)',
+                            'rgba(0, 212, 170, 0.5)'
+                        ],
+                        borderColor: [
+                            '#00D4AA',
+                            '#00D4AA',
+                            '#00D4AA'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function(value) {
+                                    return '€' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function displayRawData(data) {
+            let tableHtml = '<table><thead><tr><th>Chiave</th><th>Valore</th></tr></thead><tbody>';
+
+            function flattenObject(obj, prefix = '') {
+                for (const key in obj) {
+                    const newKey = prefix ? `${prefix}.${key}` : key;
+                    if (typeof obj[key] === 'object' && obj[key] !== null) {
+                        flattenObject(obj[key], newKey);
+                    } else {
+                        tableHtml += `<tr><td>${newKey}</td><td>${obj[key]}</td></tr>`;
+                    }
+                }
+            }
+
+            flattenObject(data);
+            tableHtml += '</tbody></table>';
+            rawDataTable.innerHTML = tableHtml;
+        }
+
+        function toggleRawData() {
+            rawDataTable.classList.toggle('open');
+            const btn = document.querySelector('.raw-data-toggle');
+            btn.textContent = rawDataTable.classList.contains('open') ? 'Nascondi dati completi' : 'Mostra dati completi';
+        }
+
+        function resetForm() {
+            vinInput.value = '';
+            resultsSection.classList.remove('open');
+            resultsGrid.innerHTML = '';
+            rawDataTable.innerHTML = '';
+            rawDataTable.classList.remove('open');
+            document.querySelector('.raw-data-toggle').textContent = 'Mostra dati completi';
+            clearMessages();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function updateCreditDisplay() {
+            document.getElementById('credits-count').textContent = credits;
+        }
+
+        function showSuccessMessage(text) {
+            messageContainer.innerHTML = `<div class="message success">${text}</div>`;
+            setTimeout(() => clearMessages(), 5000);
+        }
+
+        function showErrorMessage(text) {
+            messageContainer.innerHTML = `<div class="message error">${text}</div>`;
+            setTimeout(() => clearMessages(), 5000);
+        }
+
+        function clearMessages() {
+            messageContainer.innerHTML = '';
+        }
+
+        function toggleFaq(btn) {
+            const answer = btn.nextElementSibling;
+            const icon = btn.querySelector('.faq-icon');
+            answer.classList.toggle('open');
+            icon.classList.toggle('open');
+        }
+
+        function openModal() {
+            buyModal.classList.add('open');
+        }
+
+        function closeModal() {
+            buyModal.classList.remove('open');
+        }
+
+        // PayPal Buttons
+        function createPayPalButtons(containerId, price, creditsAmount, packName) {
+            paypal.Buttons({
+                createOrder: function(data, actions) {
+                    return actions.order.create({
+                        purchase_units: [{
+                            amount: { value: price, currency_code: 'EUR' },
+                            description: `VinCheck Pro - ${packName}`
+                        }]
+                    });
+                },
+                onApprove: function(data, actions) {
+                    return actions.order.capture().then(function(details) {
+                        credits += creditsAmount;
+                        localStorage.setItem('vincheck_credits', credits);
+                        updateCreditDisplay();
+                        showSuccessMessage(`Pagamento completato! Crediti aggiunti: ${creditsAmount}`);
+                        closeModal();
+                    });
+                },
+                onError: function(err) {
+                    showErrorMessage('Errore nel pagamento. Riprova o contatta il supporto.');
+                },
+                style: {
+                    layout: 'vertical',
+                    color: 'blue',
+                    shape: 'rect',
+                    label: 'pay'
+                }
+            }).render(containerId);
+        }
+
+        // Initialize PayPal buttons on page
+        createPayPalButtons('#paypal-button-starter', '7.99', 3, 'Pack Starter');
+        createPayPalButtons('#paypal-button-popular', '19.99', 10, 'Pack Popular');
+        createPayPalButtons('#paypal-button-pro', '39.99', 25, 'Pack Pro');
+        createPayPalButtons('#paypal-button-modal-popular', '19.99', 10, 'Pack Popular');
+    </script>
+</body>
+</html>
