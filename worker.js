@@ -48,10 +48,10 @@ export default {
       }
 
       // Call GlobalVIN API
-      const response = await fetch('https://api.globalvin.com/api/vin/lookup/decode', {
+      const response = await fetch('https://api.globalvin.co/v1/api/vin/basic', {
         method: 'POST',
         headers: {
-          'X-API-Key': apiKey,
+          'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestBody),
