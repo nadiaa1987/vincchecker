@@ -43,7 +43,7 @@ export default {
     }
 
     try {
-      const { vin, type } = await request.json();
+      const { identifier, inputType, type } = await request.json();
 
       // Validate input
       if (!type) {
@@ -56,7 +56,9 @@ export default {
         });
       }
 
-      if (type !== 'balance' && type !== 'info') {
+      let vin = null;
+      if (inputType === 'vin') {
+        vin = identifier;
         if (!validateVin(vin)) {
           return new Response(JSON.stringify({ error: 'Il numero VIN inserito non è valido' }), {
             status: 400,
@@ -66,16 +68,21 @@ export default {
             },
           });
         }
+      } else if (inputType === 'targa') {
+        // For targa, we need to check if Vincario supports it
+        // Note: Check Vincario API docs for targa endpoint
+        // For now, we'll treat it as VIN (or use appropriate endpoint)
+        vin = identifier;
       }
 
       const apiKey = env.VINCARIO_API_KEY;
       const secretKey = env.VINCARIO_SECRET_KEY;
-      const upperVin = vin ? vin.toUpperCase() : '';
+      const upperIdentifier = identifier ? identifier.toUpperCase() : '';
 
       // Calculate control sum
       let controlSumMessage;
-      if (upperVin) {
-        controlSumMessage = `${upperVin}|${type}|${apiKey}|${secretKey}`;
+      if (upperIdentifier) {
+        controlSumMessage = `${upperIdentifier}|${type}|${apiKey}|${secretKey}`;
       } else {
         controlSumMessage = `${type}|${apiKey}|${secretKey}`;
       }
@@ -83,8 +90,8 @@ export default {
 
       // Build Vincario API URL
       let apiUrl;
-      if (upperVin) {
-        apiUrl = `https://api.vincario.com/3.2/${type}/${upperVin}/${apiKey}/${controlSum}`;
+      if (upperIdentifier) {
+        apiUrl = `https://api.vincario.com/3.2/${type}/${upperIdentifier}/${apiKey}/${controlSum}`;
       } else {
         apiUrl = `https://api.vincario.com/3.2/${type}/${apiKey}/${controlSum}`;
       }
@@ -97,7 +104,7 @@ export default {
         let errorMessage = 'Errore nel recupero dei dati. Riprova tra qualche secondo.';
         
         if (vincarioResponse.status === 404) {
-          errorMessage = 'Nessun dato trovato per questo VIN';
+          errorMessage = inputType === 'targa' ? 'Nessun dato trovato per questa targa' : 'Nessun dato trovato per questo VIN';
         } else if (vincarioResponse.status === 402 || errorText.toLowerCase().includes('balance')) {
           errorMessage = 'Crediti API esauriti. Contattare il supporto.';
         }

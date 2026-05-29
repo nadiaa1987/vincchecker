@@ -173,6 +173,27 @@
             transform: none;
         }
 
+        .toggle-btn {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 2px solid #E5E7EB;
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .toggle-btn.active {
+            border-color: var(--teal);
+            background-color: rgba(0,212,170,0.1);
+            color: var(--teal);
+        }
+
+        .toggle-btn:hover {
+            border-color: var(--teal);
+        }
+
         .error-text {
             color: var(--error);
             font-size: 0.875rem;
@@ -805,9 +826,14 @@
 
     <section class="vin-input-section">
         <div id="message-container"></div>
+        <div class="input-toggle" style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+            <button id="toggle-vin" class="toggle-btn active" onclick="setInputType('vin')">VIN</button>
+            <button id="toggle-targa" class="toggle-btn" onclick="setInputType('targa')">Targa</button>
+        </div>
         <div class="vin-input-wrapper">
             <input type="text" id="vin-input" class="vin-input" placeholder="Inserisci il numero VIN (17 caratteri)" maxlength="17">
-            <button id="check-btn" class="check-btn">Controlla VIN</button>
+            <input type="text" id="targa-input" class="vin-input" placeholder="Inserisci la targa" maxlength="10" style="display: none;">
+            <button id="check-btn" class="check-btn">Controlla</button>
         </div>
         <p id="error-text" class="error-text" style="display: none;"></p>
     </section>
@@ -946,7 +972,7 @@
     <section class="results" id="results">
         <div class="results-header">
             <h2>Risultati del Controllo</h2>
-            <button class="reset-btn" onclick="resetForm()">Controlla un altro VIN</button>
+            <button class="reset-btn" onclick="resetForm()">Controlla un altro veicolo</button>
         </div>
         <div class="results-grid" id="results-grid"></div>
         <div class="raw-data">
@@ -989,6 +1015,9 @@
         // Configuration
         const WORKER_URL = 'https://your-worker.workers.dev/api/check-vin';
 
+        // Current input type
+        let currentInputType = 'vin';
+
         // Initialize credits
         let credits = parseInt(localStorage.getItem('vincheck_credits'));
         if (isNaN(credits)) {
@@ -999,6 +1028,7 @@
 
         // DOM Elements
         const vinInput = document.getElementById('vin-input');
+        const targaInput = document.getElementById('targa-input');
         const checkBtn = document.getElementById('check-btn');
         const errorText = document.getElementById('error-text');
         const resultsSection = document.getElementById('results');
@@ -1007,6 +1037,18 @@
         const buyModal = document.getElementById('buy-modal');
         const messageContainer = document.getElementById('message-container');
 
+        // Toggle input type
+        function setInputType(type) {
+            currentInputType = type;
+            document.getElementById('toggle-vin').classList.toggle('active', type === 'vin');
+            document.getElementById('toggle-targa').classList.toggle('active', type === 'targa');
+            vinInput.style.display = type === 'vin' ? 'block' : 'none';
+            targaInput.style.display = type === 'targa' ? 'block' : 'none';
+            errorText.style.display = 'none';
+            vinInput.classList.remove('error');
+            targaInput.classList.remove('error');
+        }
+
         // VIN input formatting
         vinInput.addEventListener('input', function(e) {
             this.value = this.value.toUpperCase();
@@ -1014,29 +1056,51 @@
             errorText.style.display = 'none';
         });
 
-        // Check VIN button
-        checkBtn.addEventListener('click', checkVin);
+        // Targa input formatting
+        targaInput.addEventListener('input', function(e) {
+            this.value = this.value.toUpperCase();
+            this.classList.remove('error');
+            errorText.style.display = 'none';
+        });
+
+        // Check button
+        checkBtn.addEventListener('click', checkVehicle);
 
         vinInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                checkVin();
+                checkVehicle();
             }
         });
 
-        async function checkVin() {
-            const vin = vinInput.value.trim();
+        targaInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkVehicle();
+            }
+        });
+
+        async function checkVehicle() {
+            let identifier;
+            if (currentInputType === 'vin') {
+                identifier = vinInput.value.trim();
+                if (!validateVin(identifier)) {
+                    vinInput.classList.add('error');
+                    errorText.textContent = 'Il numero VIN inserito non è valido (17 caratteri, senza I, O, Q)';
+                    errorText.style.display = 'block';
+                    return;
+                }
+            } else {
+                identifier = targaInput.value.trim();
+                if (!identifier || identifier.length < 3) {
+                    targaInput.classList.add('error');
+                    errorText.textContent = 'Inserisci una targa valida';
+                    errorText.style.display = 'block';
+                    return;
+                }
+            }
 
             // Validate credits first
             if (credits <= 0) {
                 openModal();
-                return;
-            }
-
-            // Validate VIN
-            if (!validateVin(vin)) {
-                vinInput.classList.add('error');
-                errorText.textContent = 'Il numero VIN inserito non è valido (17 caratteri, senza I, O, Q)';
-                errorText.style.display = 'block';
                 return;
             }
 
@@ -1048,9 +1112,9 @@
             try {
                 // Make all three API calls in parallel
                 const [decodeData, stolenData, marketValueData] = await Promise.all([
-                    makeApiCall(vin, 'decode'),
-                    makeApiCall(vin, 'stolen-check'),
-                    makeApiCall(vin, 'vehicle-market-value')
+                    makeApiCall(identifier, currentInputType, 'decode'),
+                    makeApiCall(identifier, currentInputType, 'stolen-check'),
+                    makeApiCall(identifier, currentInputType, 'vehicle-market-value')
                 ]);
 
                 // Deduct credit
@@ -1070,17 +1134,17 @@
                 showErrorMessage(error.message || 'Errore nel recupero dei dati. Riprova tra qualche secondo.');
             } finally {
                 checkBtn.disabled = false;
-                checkBtn.innerHTML = 'Controlla VIN';
+                checkBtn.innerHTML = 'Controlla';
             }
         }
 
-        async function makeApiCall(vin, type) {
+        async function makeApiCall(identifier, inputType, type) {
             const response = await fetch(WORKER_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ vin, type }),
+                body: JSON.stringify({ identifier, inputType, type }),
             });
 
             const data = await response.json();
@@ -1252,6 +1316,8 @@
 
         function resetForm() {
             vinInput.value = '';
+            targaInput.value = '';
+            setInputType('vin');
             resultsSection.classList.remove('open');
             resultsGrid.innerHTML = '';
             rawDataTable.innerHTML = '';
